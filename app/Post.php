@@ -11,4 +11,8 @@ class Post extends Model
     // public $id = 'id';
     // public $timestamps = true;
 
+    public function user(){
+        return $this->belongsTo('App\User');
+    }
+
 }
