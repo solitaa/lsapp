@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PostsController extends Controller
 {
@@ -15,7 +16,7 @@ class PostsController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('auth',['except' => ['index', 'show']]);
+        $this->middleware('auth', ['except' => ['index', 'show']]);
     }
     /**
      * Display a listing of the resource.
@@ -52,11 +53,11 @@ class PostsController extends Controller
         $this->validate($request, [
             "title" => "required",
             "body" => "required",
-            'cover_image' => 'image|nullable|max:1999'
+            'cover_image' => 'image|nullable|max:1999',
         ]);
 
         //handle file upload
-        if($request->hasFile('cover_image')){
+        if ($request->hasFile('cover_image')) {
             //Get filename with extension
             $filenameWithExt = $request->file('cover_image')->getClientOriginalName();
 
@@ -65,11 +66,10 @@ class PostsController extends Controller
 
             //get just extension
             $extension = $request->file('cover_image')->getClientOriginalExtension();
-            $fileNameToStore = $filename.'_'.time().'.'.$extension;
+            $fileNameToStore = $filename . '_' . time() . '.' . $extension;
 
             $path = $request->file('cover_image')->storeAs('public/cover_images', $fileNameToStore);
-        }
-        else {
+        } else {
             $fileNameToStore = 'noimage.jpg';
         }
 
@@ -82,8 +82,6 @@ class PostsController extends Controller
 
         return redirect('/posts')->with('success', "post Created");
     }
-
-    
 
     /**
      * Display the specified resource.
@@ -109,7 +107,7 @@ class PostsController extends Controller
 
         //Check for correct user
 
-        if(auth()->user()->id !== $post->user_id){
+        if (auth()->user()->id !== $post->user_id) {
             return redirect('/posts')->with('error', 'Unauthorized Page');
         }
         //return $post;
@@ -128,9 +126,28 @@ class PostsController extends Controller
         $this->validate($request, [
             "title" => "required",
             "body" => "required",
+            
         ]);
+
+        //handle file upload
+        if ($request->hasFile('cover_image')) {
+            //Get filename with extension
+            $filenameWithExt = $request->file('cover_image')->getClientOriginalName();
+
+            //get just filename
+            $filename = pathinfo($filenameWithExt, PATHINFO_FILENAME);
+
+            //get just extension
+            $extension = $request->file('cover_image')->getClientOriginalExtension();
+            $fileNameToStore = $filename . '_' . time() . '.' . $extension;
+
+            $path = $request->file('cover_image')->storeAs('public/cover_images', $fileNameToStore);
+        }
         $post = Post::find($id);
         $post->title = $request->input('title');
+        if ($request->hasFile('cover_image')) {
+            $post->cover_image = $fileNameToStore;
+        }
         $post->body = $request->input('body');
         $post->save();
 
@@ -146,6 +163,14 @@ class PostsController extends Controller
     public function destroy($id)
     {
         $post = Post::find($id);
+        if(auth()->user()->id !== $post->user_id){
+            return redirect('/posts')->with('error', "Unauthorized Page");
+
+        }
+
+        if($post->cover_image != "noimage.jpg"){
+            Storage::delete('public/cover_iamges/'.$post->cover_image);
+        }
         $post->delete();
 
         return redirect('/posts')->with('success', "post Deleted");
